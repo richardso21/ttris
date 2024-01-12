@@ -14,7 +14,6 @@ from ttris.constants import (
     BOARD_Y,
     LOCK_DELAY,
     MINO_ARRS,
-    MINO_SHADOW,
 )
 
 
@@ -27,6 +26,10 @@ class MinoType(Enum):
     MINO_Z = 5
     MINO_J = 6
     MINO_L = 7
+
+    def __bool__(self):
+        # NO_MINOs are falsy, everything else is truthy
+        return self.value != 0
 
 
 class Tetrimino:
@@ -42,8 +45,16 @@ class Tetrimino:
         self.lockDelayStart = -1
 
     @property
-    def spin(self):
+    def spin(self) -> int:
         return self._spin % 4
+
+    def resetPiece(self) -> None:
+        # resets all mino properties to default when first initialized
+        self.x = 3
+        self.y = 2
+        self.minoArr = MINO_ARRS[self.minoType.value - 1]
+        self._spin = 0
+        self.lockDelayStart = -1
 
     def draw(self, hint=False) -> None:
         minoTypeVal = self.minoType.value - 1 if not hint else 7

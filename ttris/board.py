@@ -21,8 +21,12 @@ class Board:
         self.arr = arr
         self.spawnMino()
         self.hold = None
+        self.holdLock = False
 
     def update(self) -> None:
+        # check controls
+        if pyxel.btnp(pyxel.KEY_SHIFT):
+            self.holdCurrPiece()
         if pyxel.btnp(pyxel.KEY_SPACE):
             self.hardDropCurrPiece()
         if pyxel.btnp(pyxel.KEY_DOWN, repeat=self.arr):
@@ -36,7 +40,15 @@ class Board:
             self.currPiece.moveX(-1, self.boardArr)
         if pyxel.btnp(pyxel.KEY_RIGHT, hold=self.das, repeat=self.arr):
             self.currPiece.moveX(1, self.boardArr)
-            pass
+
+        # check for any line clears and construct new board if necessary
+        clear_inds = [i for i, row in enumerate(self.boardArr) if all(row)]
+        if len(clear_inds):  # some lines need to be cleared
+            new_board_arr = [[MinoType.NO_MINO] * BOARD_WIDTH for _ in clear_inds]
+            new_board_arr.extend(
+                [row for i, row in enumerate(self.boardArr) if i not in clear_inds]
+            )
+            self.boardArr = new_board_arr
 
     def draw(self) -> None:
         # background (DEBUGGING)
@@ -50,7 +62,7 @@ class Board:
             BOARD_Y + (BLOCK_SIZE * OVERFLOW_HEIGHT) - 1,
             (BOARD_WIDTH * BLOCK_SIZE) + 2,
             ((BOARD_HEIGHT - OVERFLOW_HEIGHT) * BLOCK_SIZE) + 2,
-            7,
+            13,
         )
         # "undraw" the top edge of the board border
         pyxel.rect(
@@ -74,7 +86,23 @@ class Board:
         self.currPiece.draw(hint=True)  # draw hint first, then the actual piece
         self.currPiece.draw()
 
-    def hardDropCurrPiece(self):
+    def holdCurrPiece(self) -> None:
+        if self.holdLock:
+            return
+        # swap hold and current item
+        tmp = self.hold
+        self.hold = self.currPiece
+        # or get next item in queue if hold is empty
+        self.currPiece = tmp if tmp else self.minoProvider.fetchMino()
+        self.currPiece.updateHint(self.boardArr)
+
+        # reset x-y and rotation state of the now held piece
+        self.hold.resetPiece()
+
+        # prevent infinite holding
+        self.holdLock = True
+
+    def hardDropCurrPiece(self) -> None:
         self.currPiece.hardDrop(self.boardArr)
 
         # copy piece to board
@@ -88,7 +116,8 @@ class Board:
 
         # get new piece
         self.spawnMino()
+        self.holdLock = False
 
-    def spawnMino(self):
+    def spawnMino(self) -> None:
         self.currPiece = self.minoProvider.fetchMino()
         self.currPiece.updateHint(self.boardArr)
