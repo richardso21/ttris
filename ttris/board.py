@@ -30,8 +30,7 @@ class Board:
         if pyxel.btnp(pyxel.KEY_SPACE):
             self.hardDropCurrPiece()
         if pyxel.btnp(pyxel.KEY_DOWN, repeat=self.arr):
-            if not self.currPiece.softDrop(self.boardArr):
-                self.hardDropCurrPiece()
+            self.currPiece.softDrop(self.boardArr)
         if pyxel.btnp(pyxel.KEY_UP) or pyxel.btnp(pyxel.KEY_X):
             self.currPiece.rotateMino(1, self.boardArr)
         if pyxel.btnp(pyxel.KEY_Z):
@@ -41,6 +40,10 @@ class Board:
         if pyxel.btnp(pyxel.KEY_RIGHT, hold=self.das, repeat=self.arr):
             self.currPiece.moveX(1, self.boardArr)
 
+        # check lock delay of piece, hard drop if lock expires
+        if self.currPiece.lockDelayExpired(self.boardArr):
+            self.hardDropCurrPiece()
+
         # check for any line clears and construct new board if necessary
         clear_inds = [i for i, row in enumerate(self.boardArr) if all(row)]
         if len(clear_inds):  # some lines need to be cleared
@@ -49,13 +52,10 @@ class Board:
                 [row for i, row in enumerate(self.boardArr) if i not in clear_inds]
             )
             self.boardArr = new_board_arr
+            # need to re-update hint with new board state
+            self.currPiece.updateHint(self.boardArr)
 
     def draw(self) -> None:
-        # background (DEBUGGING)
-        pyxel.rect(
-            BOARD_X, BOARD_Y, BOARD_WIDTH * BLOCK_SIZE, BOARD_HEIGHT * BLOCK_SIZE, 1
-        )
-
         # draw the bounding box up to the 20th block
         pyxel.rectb(
             BOARD_X - 1,

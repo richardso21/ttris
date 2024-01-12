@@ -14,6 +14,7 @@ from ttris.constants import (
     BOARD_Y,
     LOCK_DELAY,
     MINO_ARRS,
+    SRS_TESTS,
 )
 
 
@@ -56,7 +57,25 @@ class Tetrimino:
         self._spin = 0
         self.lockDelayStart = -1
 
+    def lockDelayExpired(self, board: List[List[MinoType]]) -> bool:
+        # returns boolean if the lock for the current piece has expired
+        new_mino = Tetrimino(
+            self.minoType, x=self.x, y=self.y + 1, minoArr=self.minoArr
+        )
+        if not new_mino.isValidPosition(board):
+            if self.lockDelayStart == -1:
+                self.lockDelayStart = pyxel.frame_count
+        else:
+            self.lockDelayStart = -1
+
+        return (
+            self.lockDelayStart != -1
+            and pyxel.frame_count - self.lockDelayStart > LOCK_DELAY
+        )
+
     def draw(self, hint=False) -> None:
+        # draw the floating mino on top of the board
+        # if hint, then draw outline of piece instead with the hintY value
         minoTypeVal = self.minoType.value - 1 if not hint else 7
         minoY = self.y if not hint else self.hintY
         for i, row in enumerate(self.minoArr):
@@ -79,17 +98,22 @@ class Tetrimino:
             if direction > 0
             else list(zip(*self.minoArr))[::-1]
         )
-        new_mino = Tetrimino(self.minoType, x=self.x, y=self.y, minoArr=new_minoArr)
 
-        # check if rotation works
-        if not new_mino.isValidPosition(board):
-            return
-
-        # save rotation if successful
-        self._spin += direction
-        self.minoArr = new_minoArr
-        self.lockDelayStart = -1
-        self.updateHint(board)
+        # check if rotation works with the SRS tests
+        tests = SRS_TESTS[self.spin][0 if direction == 1 else 1]
+        for test_x, test_y in tests:
+            new_mino = Tetrimino(
+                self.minoType, x=self.x + test_x, y=self.y + test_y, minoArr=new_minoArr
+            )
+            if new_mino.isValidPosition(board):
+                # save rotation if successful
+                self._spin += direction
+                self.minoArr = new_minoArr
+                self.x += test_x
+                self.y += test_y
+                self.lockDelayStart = -1
+                self.updateHint(board)
+                break
 
     def moveX(self, direction: int, board: List[List[MinoType]]) -> None:
         new_x = self.x + direction
@@ -101,38 +125,30 @@ class Tetrimino:
 
         # save x translation
         self.x = new_x
+        self.lockDelayStart = -1
         self.updateHint(board)
 
-    def softDrop(self, board: List[List[MinoType]]) -> bool:
-        # returns boolean if piece is still falling (including lock delay)
+    def softDrop(self, board: List[List[MinoType]]) -> None:
         new_mino = Tetrimino(
             self.minoType, x=self.x, y=self.y + 1, minoArr=self.minoArr
         )
 
-        if not new_mino.isValidPosition(board):
-            # if something's blocking below, start lock delay, return false
-            # once delay expires
-            if self.lockDelayStart == -1:
-                self.lockDelayStart = pyxel.frame_count
-            return pyxel.frame_count - self.lockDelayStart <= LOCK_DELAY
-
-        # reset lock delay
-        self.lockDelayStart = -1
-        self.y += 1
-        return True
+        # move piece down if it's okay to do so
+        if new_mino.isValidPosition(board):
+            self.y += 1
 
     def hardDrop(self, board: List[List[MinoType]]) -> None:
-        # pretend we are soft dropping until we can't go any further
         new_mino = Tetrimino(
             self.minoType, x=self.x, y=self.y + 1, minoArr=self.minoArr
         )
+        # pretend we are soft dropping until we can't go any further
         while new_mino.isValidPosition(board):
             new_mino.y += 1
             self.y += 1
 
     def updateHint(self, board: List[List[MinoType]]) -> None:
         # make a copy of the current mino, see how far it hard drops to,
-        # then take the y-value of that mino after the drop
+        # that is where the hint should be drawn
         hint_mino = Tetrimino(self.minoType, x=self.x, y=self.y, minoArr=self.minoArr)
         hint_mino.hardDrop(board)
         self.hintY = hint_mino.y
@@ -149,7 +165,6 @@ class Tetrimino:
                     continue
                 block_x = j + self.x
                 block_y = i + self.y
-
                 if (not 0 <= block_x < BOARD_WIDTH) or (
                     not 0 <= block_y < BOARD_HEIGHT
                 ):
