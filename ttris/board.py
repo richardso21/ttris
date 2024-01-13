@@ -8,7 +8,7 @@ from ttris.constants import (
     BOARD_Y,
     OVERFLOW_HEIGHT,
 )
-from ttris.tetriminos import MinoProvider, MinoType
+from ttris.tetriminos import MinoProvider, MinoType, Tetrimino
 
 
 class Board:
@@ -92,8 +92,25 @@ class Board:
                 u = (block.value - 1) * BLOCK_SIZE
                 pyxel.blt(x, y, 1, u, 0, BLOCK_SIZE, BLOCK_SIZE)
 
-        self.currPiece.draw(hint=True)  # draw hint first, then the actual piece
-        self.currPiece.draw()
+        self.currPiece.drawOnBoard(hint=True)  # draw hint first, then the actual piece
+        self.currPiece.drawOnBoard()
+
+        # draw holding piece
+        if self.hold:
+            self.hold.draw(
+                -10
+                if self.hold.minoType not in [MinoType.MINO_I, MinoType.MINO_O]
+                else -14,
+                15,
+            )
+
+        # TODO: make assets in pyxel resource
+        # draw minos/pieces in queue
+        for i, minoType in enumerate(self.minoProvider.minoPreview):
+            Tetrimino(minoType).draw(
+                115 + (4 if minoType not in [MinoType.MINO_I, MinoType.MINO_O] else 0),
+                15 + (i * 24) - (4 if minoType is MinoType.MINO_I else 0),
+            )
 
     def holdCurrPiece(self) -> None:
         if self.holdLock:

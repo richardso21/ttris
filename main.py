@@ -14,7 +14,7 @@ class TtrisGame:
             fps=FPS,
         )
         pyxel.load("assets/ttris.pyxres")
-        self.board = Board(10, 2, 5)
+        self.board = Board(10, 1, 5)
         pyxel.run(self.update, self.draw)
 
     def update(self) -> None:

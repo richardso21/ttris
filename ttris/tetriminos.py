@@ -74,7 +74,18 @@ class Tetrimino:
             and pyxel.frame_count - self.lockDelayStart > LOCK_DELAY
         )
 
-    def draw(self, hint=False) -> None:
+    def draw(self, x: int, y: int) -> None:
+        minoTypeVal = self.minoType.value - 1
+        for i, row in enumerate(self.minoArr):
+            for j, block in enumerate(row):
+                if not block:
+                    continue
+                draw_x = (self.x + j) * BLOCK_SIZE + x
+                draw_y = (self.y + i) * BLOCK_SIZE + y
+                u = (minoTypeVal) * BLOCK_SIZE
+                pyxel.blt(draw_x, draw_y, 1, u, 0, BLOCK_SIZE, BLOCK_SIZE)
+
+    def drawOnBoard(self, hint=False) -> None:
         # draw the floating mino on top of the board
         # if hint, then draw outline of piece instead with the hintY value
         minoTypeVal = self.minoType.value - 1 if not hint else 7
