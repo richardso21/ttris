@@ -19,9 +19,13 @@ class Board:
         self.minoProvider = MinoProvider(lookahead)
         self.das = das
         self.arr = arr
+
         self.spawnMino()
         self.hold = None
         self.holdLock = False
+
+        self.softDropTimer = 45
+        self.linesCleared = 0
 
     def update(self) -> None:
         # check controls
@@ -40,6 +44,10 @@ class Board:
         if pyxel.btnp(pyxel.KEY_RIGHT, hold=self.das, repeat=self.arr):
             self.currPiece.moveX(1, self.boardArr)
 
+        # piece gravity
+        if pyxel.frame_count % self.softDropTimer == 0:
+            self.currPiece.softDrop(self.boardArr)
+
         # check lock delay of piece, hard drop if lock expires
         if self.currPiece.lockDelayExpired(self.boardArr):
             self.hardDropCurrPiece()
@@ -54,6 +62,7 @@ class Board:
             self.boardArr = new_board_arr
             # need to re-update hint with new board state
             self.currPiece.updateHint(self.boardArr)
+            self.linesCleared += len(clear_inds)
 
     def draw(self) -> None:
         # draw the bounding box up to the 20th block

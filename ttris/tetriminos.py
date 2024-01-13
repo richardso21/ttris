@@ -15,6 +15,7 @@ from ttris.constants import (
     LOCK_DELAY,
     MINO_ARRS,
     SRS_TESTS,
+    SRS_TESTS_I,
 )
 
 
@@ -100,17 +101,19 @@ class Tetrimino:
         )
 
         # check if rotation works with the SRS tests
-        tests = SRS_TESTS[self.spin][0 if direction == 1 else 1]
+        tests = (SRS_TESTS if self.minoType != MinoType.MINO_I else SRS_TESTS_I)[
+            self.spin
+        ][0 if direction == 1 else 1]
         for test_x, test_y in tests:
             new_mino = Tetrimino(
-                self.minoType, x=self.x + test_x, y=self.y + test_y, minoArr=new_minoArr
+                self.minoType, x=self.x + test_x, y=self.y - test_y, minoArr=new_minoArr
             )
             if new_mino.isValidPosition(board):
                 # save rotation if successful
                 self._spin += direction
                 self.minoArr = new_minoArr
                 self.x += test_x
-                self.y += test_y
+                self.y -= test_y
                 self.lockDelayStart = -1
                 self.updateHint(board)
                 break
