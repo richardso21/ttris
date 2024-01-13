@@ -99,9 +99,9 @@ class Tetrimino:
                 u = (minoTypeVal) * BLOCK_SIZE
                 pyxel.blt(x, y, 1, u, 0, BLOCK_SIZE, BLOCK_SIZE)
 
-    def rotateMino(self, direction: int, board: List[List[MinoType]]) -> None:
+    def rotateMino(self, direction: int, board: List[List[MinoType]]) -> bool:
         if self.minoType == MinoType.MINO_O:  # O-pieces can't rotate
-            return
+            return True
 
         # perform the rotation
         # https://stackoverflow.com/questions/8421337/rotating-a-two-dimensional-array-in-python
@@ -127,29 +127,34 @@ class Tetrimino:
                 self.y -= test_y
                 self.lockDelayStart = -1
                 self.updateHint(board)
-                break
+                return True
+        return False
 
-    def moveX(self, direction: int, board: List[List[MinoType]]) -> None:
+    def moveX(self, direction: int, board: List[List[MinoType]]) -> bool:
         new_x = self.x + direction
         new_mino = Tetrimino(self.minoType, x=new_x, y=self.y, minoArr=self.minoArr)
 
         # check if move is valid
         if not new_mino.isValidPosition(board):
-            return
+            return False
 
         # save x translation
         self.x = new_x
         self.lockDelayStart = -1
         self.updateHint(board)
+        return True
 
-    def softDrop(self, board: List[List[MinoType]]) -> None:
+    def softDrop(self, board: List[List[MinoType]]) -> bool:
         new_mino = Tetrimino(
             self.minoType, x=self.x, y=self.y + 1, minoArr=self.minoArr
         )
 
-        # move piece down if it's okay to do so
-        if new_mino.isValidPosition(board):
-            self.y += 1
+        # move piece down only if it's okay to do so
+        if not new_mino.isValidPosition(board):
+            return False
+
+        self.y += 1
+        return True
 
     def hardDrop(self, board: List[List[MinoType]]) -> None:
         new_mino = Tetrimino(

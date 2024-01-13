@@ -34,15 +34,20 @@ class Board:
         if pyxel.btnp(pyxel.KEY_SPACE):
             self.hardDropCurrPiece()
         if pyxel.btnp(pyxel.KEY_DOWN, repeat=self.arr):
-            self.currPiece.softDrop(self.boardArr)
+            if self.currPiece.softDrop(self.boardArr):
+                pyxel.play(3, 3)
         if pyxel.btnp(pyxel.KEY_UP) or pyxel.btnp(pyxel.KEY_X):
-            self.currPiece.rotateMino(1, self.boardArr)
+            if self.currPiece.rotateMino(1, self.boardArr):
+                pyxel.play(2, 2)
         if pyxel.btnp(pyxel.KEY_Z):
-            self.currPiece.rotateMino(-1, self.boardArr)
+            if self.currPiece.rotateMino(-1, self.boardArr):
+                pyxel.play(2, 2)
         if pyxel.btnp(pyxel.KEY_LEFT, hold=self.das, repeat=self.arr):
-            self.currPiece.moveX(-1, self.boardArr)
+            if self.currPiece.moveX(-1, self.boardArr):
+                pyxel.play(3, 3)
         if pyxel.btnp(pyxel.KEY_RIGHT, hold=self.das, repeat=self.arr):
-            self.currPiece.moveX(1, self.boardArr)
+            if self.currPiece.moveX(1, self.boardArr):
+                pyxel.play(3, 3)
 
         # piece gravity
         if pyxel.frame_count % self.softDropTimer == 0:
@@ -63,6 +68,7 @@ class Board:
             # need to re-update hint with new board state
             self.currPiece.updateHint(self.boardArr)
             self.linesCleared += len(clear_inds)
+            pyxel.play(0, 0)
 
     def draw(self) -> None:
         # draw the bounding box up to the 20th block
@@ -128,6 +134,9 @@ class Board:
         # prevent infinite holding
         self.holdLock = True
 
+        # play hold piece sound
+        pyxel.play(0, 1)
+
     def hardDropCurrPiece(self) -> None:
         self.currPiece.hardDrop(self.boardArr)
 
@@ -139,6 +148,9 @@ class Board:
                 self.boardArr[self.currPiece.y + i][
                     self.currPiece.x + j
                 ] = self.currPiece.minoType
+
+        # play hard drop sound
+        pyxel.play(1, 4)
 
         # get new piece
         self.spawnMino()
