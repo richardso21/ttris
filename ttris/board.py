@@ -1,3 +1,5 @@
+from typing import List
+
 import pyxel
 
 from ttris.constants import (
@@ -8,46 +10,33 @@ from ttris.constants import (
     BOARD_Y,
     OVERFLOW_HEIGHT,
 )
+from ttris.controls import Controller
+from ttris.sound import SoundBoard
 from ttris.tetriminos import MinoProvider, MinoType, Tetrimino
 
 
 class Board:
     def __init__(self, das, arr, lookahead):
         # make empty board
-        self.boardArr = [[MinoType.NO_MINO] * BOARD_WIDTH for _ in range(BOARD_HEIGHT)]
+        self.boardArr: List[List[MinoType]] = [
+            [MinoType.NO_MINO] * BOARD_WIDTH for _ in range(BOARD_HEIGHT)
+        ]
         # start a queue of tetraminos
         self.minoProvider = MinoProvider(lookahead)
-        self.das = das
-        self.arr = arr
 
         self.spawnMino()
         self.hold = None
         self.holdLock = False
 
-        self.softDropTimer = 45
-        self.linesCleared = 0
+        self.controller = Controller(das, arr, self)
+        self.soundBoard = SoundBoard()
+
+        self.softDropTimer: int = 45
+        self.linesCleared: int = 0
 
     def update(self) -> None:
         # check controls
-        if pyxel.btnp(pyxel.KEY_SHIFT):
-            self.holdCurrPiece()
-        if pyxel.btnp(pyxel.KEY_SPACE):
-            self.hardDropCurrPiece()
-        if pyxel.btnp(pyxel.KEY_DOWN, repeat=self.arr):
-            if self.currPiece.softDrop(self.boardArr):
-                pyxel.play(3, 3)
-        if pyxel.btnp(pyxel.KEY_UP) or pyxel.btnp(pyxel.KEY_X):
-            if self.currPiece.rotateMino(1, self.boardArr):
-                pyxel.play(2, 2)
-        if pyxel.btnp(pyxel.KEY_Z):
-            if self.currPiece.rotateMino(-1, self.boardArr):
-                pyxel.play(2, 2)
-        if pyxel.btnp(pyxel.KEY_LEFT, hold=self.das, repeat=self.arr):
-            if self.currPiece.moveX(-1, self.boardArr):
-                pyxel.play(3, 3)
-        if pyxel.btnp(pyxel.KEY_RIGHT, hold=self.das, repeat=self.arr):
-            if self.currPiece.moveX(1, self.boardArr):
-                pyxel.play(3, 3)
+        self.controller.checkControls()
 
         # piece gravity
         if pyxel.frame_count % self.softDropTimer == 0:
@@ -57,18 +46,8 @@ class Board:
         if self.currPiece.lockDelayExpired(self.boardArr):
             self.hardDropCurrPiece()
 
-        # check for any line clears and construct new board if necessary
-        clear_inds = [i for i, row in enumerate(self.boardArr) if all(row)]
-        if len(clear_inds):  # some lines need to be cleared
-            new_board_arr = [[MinoType.NO_MINO] * BOARD_WIDTH for _ in clear_inds]
-            new_board_arr.extend(
-                [row for i, row in enumerate(self.boardArr) if i not in clear_inds]
-            )
-            self.boardArr = new_board_arr
-            # need to re-update hint with new board state
-            self.currPiece.updateHint(self.boardArr)
-            self.linesCleared += len(clear_inds)
-            pyxel.play(0, 0)
+        # check and clear any lines on the board
+        self.clearLines()
 
     def draw(self) -> None:
         # draw the bounding box up to the 20th block
@@ -110,13 +89,26 @@ class Board:
                 15,
             )
 
-        # TODO: make assets in pyxel resource
         # draw minos/pieces in queue
         for i, minoType in enumerate(self.minoProvider.minoPreview):
             Tetrimino(minoType).draw(
                 115 + (4 if minoType not in [MinoType.MINO_I, MinoType.MINO_O] else 0),
                 15 + (i * 24) - (4 if minoType is MinoType.MINO_I else 0),
             )
+
+    def clearLines(self) -> None:
+        # check for any line clears and construct new board if necessary
+        clear_inds = [i for i, row in enumerate(self.boardArr) if all(row)]
+        if len(clear_inds):  # some lines need to be cleared
+            new_board_arr = [[MinoType.NO_MINO] * BOARD_WIDTH for _ in clear_inds]
+            new_board_arr.extend(
+                [row for i, row in enumerate(self.boardArr) if i not in clear_inds]
+            )
+            self.boardArr = new_board_arr
+            # need to re-update hint with new board state
+            self.currPiece.updateHint(self.boardArr)
+            self.linesCleared += len(clear_inds)
+            self.soundBoard.playLineClear()
 
     def holdCurrPiece(self) -> None:
         if self.holdLock:
@@ -133,9 +125,7 @@ class Board:
 
         # prevent infinite holding
         self.holdLock = True
-
-        # play hold piece sound
-        pyxel.play(0, 1)
+        self.soundBoard.playHold()
 
     def hardDropCurrPiece(self) -> None:
         self.currPiece.hardDrop(self.boardArr)
@@ -149,8 +139,8 @@ class Board:
                     self.currPiece.x + j
                 ] = self.currPiece.minoType
 
-        # play hard drop sound
-        pyxel.play(1, 4)
+            # play hard drop sound
+            self.soundBoard.playHardDrop()
 
         # get new piece
         self.spawnMino()

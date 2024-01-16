@@ -38,13 +38,15 @@ class Tetrimino:
     def __init__(self, minoType: MinoType, x=3, y=2, minoArr=None) -> None:
         if minoType == MinoType.NO_MINO:
             raise Exception("Mino cannot be created with MinoType == 0 (NO_MINO)")
-        self.minoType = minoType
-        self.minoArr = minoArr if minoArr else MINO_ARRS[self.minoType.value - 1]
+        self.minoType: MinoType = minoType
+        self.minoArr: List[List[int]] = (
+            minoArr if minoArr else MINO_ARRS[self.minoType.value - 1]
+        )
         # set the position of the mino at the center of board/well by default
-        self.x = x
-        self.y = y
-        self._spin = 0
-        self.lockDelayStart = -1
+        self.x: int = x
+        self.y: int = y
+        self._spin: int = 0
+        self.lockDelayStart: int = -1
 
     @property
     def spin(self) -> int:
@@ -148,7 +150,6 @@ class Tetrimino:
         new_mino = Tetrimino(
             self.minoType, x=self.x, y=self.y + 1, minoArr=self.minoArr
         )
-
         # move piece down only if it's okay to do so
         if not new_mino.isValidPosition(board):
             return False

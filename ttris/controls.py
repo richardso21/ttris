@@ -1,27 +1,47 @@
 import pyxel
 
-from ttris.tetriminos import MinoType, Tetrimino
-
 
 class Controller:
-    def __init__(self, das, arr):
-        self.das = das
-        self.arr = arr
+    def __init__(self, das, arr, board):
+        self.das: int = das
+        self.arr: int = arr
+        self.board = board
 
-        self._left = False
-        self._right = False
-        self._ccw = False
-        self._cw = False
-        self._sdrop = False
-        self._hdrop = False
+    def _checkHardDropKey(self) -> None:
+        if pyxel.btnp(pyxel.KEY_SPACE):
+            self.board.hardDropCurrPiece()
 
-    def checkControls(self):
+    def _checkHoldKey(self) -> None:
+        if pyxel.btnp(pyxel.KEY_SHIFT):
+            self.board.holdCurrPiece()
+
+    def _checkRotationKeys(self) -> None:
+        res = False
+        if pyxel.btnp(pyxel.KEY_UP) or pyxel.btnp(pyxel.KEY_X):
+            res |= self.board.currPiece.rotateMino(1, self.board.boardArr)
+
+        if pyxel.btnp(pyxel.KEY_Z):
+            res |= self.board.currPiece.rotateMino(-1, self.board.boardArr)
+
+        if res:
+            self.board.soundBoard.playRotation()
+
+    def _checkMovementKeys(self) -> None:
+        res = False
         if pyxel.btnp(pyxel.KEY_LEFT, hold=self.das, repeat=self.arr):
-            self._left = True
-        pass
+            res |= self.board.currPiece.moveX(-1, self.board.boardArr)
 
-    @property
-    def left(self):
-        res = self.keyp
-        self.keyp = [False, False, False, False]
-        return res
+        if pyxel.btnp(pyxel.KEY_RIGHT, hold=self.das, repeat=self.arr):
+            res |= self.board.currPiece.moveX(1, self.board.boardArr)
+
+        if pyxel.btnp(pyxel.KEY_DOWN, repeat=self.arr):
+            res |= self.board.currPiece.softDrop(self.board.boardArr)
+
+        if res:
+            self.board.soundBoard.playMovement()
+
+    def checkControls(self) -> None:
+        self._checkHoldKey()
+        self._checkHardDropKey()
+        self._checkRotationKeys()
+        self._checkMovementKeys()
