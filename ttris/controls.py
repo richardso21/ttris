@@ -1,5 +1,6 @@
 import pyxel
 
+from ttris.enums import TSpinType
 from ttris.tetriminos import RotationDirection
 
 
@@ -20,36 +21,39 @@ class Controller:
     def _checkRotationKeys(self) -> None:
         res = False
         if pyxel.btnp(pyxel.KEY_UP) or pyxel.btnp(pyxel.KEY_X):
-            res |= self.board.currPiece.rotateMino(
-                RotationDirection.CLOCKWISE, self.board.boardArr
+            res |= self.board.curr_piece.rotateMino(
+                RotationDirection.CLOCKWISE, self.board.board_arr
             )
 
         if pyxel.btnp(pyxel.KEY_Z):
-            res |= self.board.currPiece.rotateMino(
-                RotationDirection.COUNTERCLOCKWISE, self.board.boardArr
+            res |= self.board.curr_piece.rotateMino(
+                RotationDirection.COUNTERCLOCKWISE, self.board.board_arr
             )
 
         if pyxel.btnp(pyxel.KEY_A):  # 180 rotation
-            res |= self.board.currPiece.rotateMino(
-                RotationDirection.FLIP180, self.board.boardArr
+            res |= self.board.curr_piece.rotateMino(
+                RotationDirection.FLIP180, self.board.board_arr
             )
 
         if res:
-            self.board.soundBoard.playRotation()
+            self.board.sound_board.playRotation()
+
+            if self.board.curr_piece.checkTSpin(self.board.board_arr):
+                self.board.sound_board.playLCSpecial()
 
     def _checkMovementKeys(self) -> None:
         res = False
         if pyxel.btnp(pyxel.KEY_LEFT, hold=self.das, repeat=self.arr):
-            res |= self.board.currPiece.moveX(-1, self.board.boardArr)
+            res |= self.board.curr_piece.moveX(-1, self.board.board_arr)
 
         if pyxel.btnp(pyxel.KEY_RIGHT, hold=self.das, repeat=self.arr):
-            res |= self.board.currPiece.moveX(1, self.board.boardArr)
+            res |= self.board.curr_piece.moveX(1, self.board.board_arr)
 
         if pyxel.btnp(pyxel.KEY_DOWN, repeat=self.arr):
-            res |= self.board.currPiece.softDrop(self.board.boardArr)
+            res |= self.board.curr_piece.softDrop(self.board.board_arr)
 
         if res:
-            self.board.soundBoard.playMovement()
+            self.board.sound_board.playMovement()
 
     def checkControls(self) -> None:
         self._checkHoldKey()

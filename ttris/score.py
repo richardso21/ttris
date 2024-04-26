@@ -7,4 +7,4 @@ class Score:
 
     @staticmethod
     def draw(board):
-        pyxel.text(15, 60, f"Lines\n{board.linesCleared}", 7)
+        pyxel.text(15, 60, f"Lines\n{board.lines_cleared}", 7)

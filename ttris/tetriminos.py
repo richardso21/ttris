@@ -1,8 +1,7 @@
 from collections import deque
-from enum import Enum
 from itertools import islice
 from random import Random
-from typing import List
+from typing import List, Tuple
 
 import pyxel
 
@@ -17,27 +16,7 @@ from ttris.constants import (
     SRS_TESTS,
     SRS_TESTS_I,
 )
-
-
-class RotationDirection(Enum):
-    CLOCKWISE = 1
-    COUNTERCLOCKWISE = -1
-    FLIP180 = 2
-
-
-class MinoType(Enum):
-    NO_MINO = 0
-    MINO_I = 1
-    MINO_O = 2
-    MINO_T = 3
-    MINO_S = 4
-    MINO_Z = 5
-    MINO_J = 6
-    MINO_L = 7
-
-    def __bool__(self):
-        # NO_MINOs are falsy, everything else is truthy
-        return self.value != 0
+from ttris.enums import MinoType, RotationDirection, TSpinType
 
 
 class Tetrimino:
@@ -45,46 +24,49 @@ class Tetrimino:
         if minoType == MinoType.NO_MINO:
             raise Exception("Mino cannot be created with MinoType == 0 (NO_MINO)")
         self.minoType: MinoType = minoType
-        self.minoArr: List[List[int]] = (
+        self.mino_arr: List[List[int]] = (
             minoArr if minoArr else MINO_ARRS[self.minoType.value - 1]
         )
         # set the position of the mino at the center of board/well by default
         self.x: int = x
         self.y: int = y
         self._spin: int = 0
-        self.lockDelayStart: int = -1
+        self.prev_kick = None
+        self.lock_delay_start: int = -1
 
     @property
     def spin(self) -> int:
+        # spin "condition" of the mino (0: 0°, 1: 90°, 2: 180°, 3: 270°)
         return self._spin % 4
 
     def resetPiece(self) -> None:
         # resets all mino properties to default when first initialized
         self.x = 3
         self.y = 2
-        self.minoArr = MINO_ARRS[self.minoType.value - 1]
+        self.mino_arr = MINO_ARRS[self.minoType.value - 1]
         self._spin = 0
-        self.lockDelayStart = -1
+        self.lock_delay_start = -1
 
     def lockDelayExpired(self, board: List[List[MinoType]]) -> bool:
         # returns boolean if the lock for the current piece has expired
         new_mino = Tetrimino(
-            self.minoType, x=self.x, y=self.y + 1, minoArr=self.minoArr
+            self.minoType, x=self.x, y=self.y + 1, minoArr=self.mino_arr
         )
         if not new_mino.isValidPosition(board):
-            if self.lockDelayStart == -1:
-                self.lockDelayStart = pyxel.frame_count
+            if self.lock_delay_start == -1:
+                self.lock_delay_start = pyxel.frame_count
         else:
-            self.lockDelayStart = -1
+            self.lock_delay_start = -1
 
         return (
-            self.lockDelayStart != -1
-            and pyxel.frame_count - self.lockDelayStart > LOCK_DELAY
+            self.lock_delay_start != -1
+            and pyxel.frame_count - self.lock_delay_start > LOCK_DELAY
         )
 
     def draw(self, x: int, y: int) -> None:
+        # draws the mino at a specified x, y position on the screen
         minoTypeVal = self.minoType.value - 1
-        for i, row in enumerate(self.minoArr):
+        for i, row in enumerate(self.mino_arr):
             for j, block in enumerate(row):
                 if not block:
                     continue
@@ -95,12 +77,10 @@ class Tetrimino:
 
     def drawOnBoard(self, hint=False) -> None:
         # draw the floating mino on top of the board
-        # if hint, then draw outline of piece instead with the hintY value
+        # if hint is true, draw outline of piece instead with the hintY value
         minoTypeVal = self.minoType.value - 1 if not hint else 7
         minoY = self.y if not hint else self.hintY
-        if hint:
-            pyxel.dither(0.5)
-        for i, row in enumerate(self.minoArr):
+        for i, row in enumerate(self.mino_arr):
             for j, block in enumerate(row):
                 if not block:
                     continue
@@ -108,13 +88,14 @@ class Tetrimino:
                 y = (minoY + i) * BLOCK_SIZE + BOARD_Y
                 u = (minoTypeVal) * BLOCK_SIZE
                 pyxel.blt(x, y, 1, u, 0, BLOCK_SIZE, BLOCK_SIZE)
-        pyxel.dither(1)
 
     def rotateMino(
         self, direction: RotationDirection, board: List[List[MinoType]]
     ) -> bool:
+        # rotates a mino in a specified direction with the given board state
+        # returns boolean if the rotation was successful
         if self.minoType == MinoType.MINO_O:  # O-pieces can't rotate
-            return True
+            return False
 
         new_minoArr = self._getRotatedMinoArr(direction.value)
 
@@ -129,16 +110,20 @@ class Tetrimino:
             if new_mino.isValidPosition(board):
                 # save rotation if successful
                 self._spin += direction.value
-                self.minoArr = new_minoArr
+                self.mino_arr = new_minoArr
                 self.x += test_x
                 self.y -= test_y
-                self.lockDelayStart = -1
+                self.lock_delay_start = -1
                 self.updateHint(board)
+                self.prev_kick = (test_x, test_y)
                 return True
+
         return False
 
     def _getRotatedMinoArr(self, direction: int) -> List[List[int]]:
-        new_minoArr = self.minoArr
+        # returns a rotated copy of minoArr based on the direction value
+        # e.g. direction = 1 -> rotate clockwise, direction = -1 -> rotate counterclockwise, direction = 2 -> rotate 180°
+        new_minoArr = self.mino_arr
         while direction != 0:
             # perform the rotation
             # https://stackoverflow.com/questions/8421337/rotating-a-two-dimensional-array-in-python
@@ -150,9 +135,43 @@ class Tetrimino:
             direction -= 1 if direction > 0 else -1
         return new_minoArr
 
+    def checkTSpin(self, board: List[List[MinoType]]) -> TSpinType:
+        # check if the current T piece is in a position only possible after a T-spin
+        if self.minoType != MinoType.MINO_T:
+            return TSpinType.NONE
+
+        # if a TST kick was used most recently, it is definitely a T-spin
+        # (kick that pushes tetrimino two blocks down and one to either side)
+        if self.prev_kick and abs(self.prev_kick[0]) == 1 and self.prev_kick[1] == -2:
+            return TSpinType.TSPIN
+
+        # check how many corners around the T piece have another block
+        corner_count = {}
+        for corner in [(0, 0), (2, 0), (0, 2), (2, 2)]:
+            corner_count[corner] = 0
+            x, y = corner
+            if (
+                (not 0 <= self.x + x < BOARD_WIDTH)  # out of bounds counts as filled
+                or (not 0 <= self.y + y < BOARD_HEIGHT)
+                or board[self.y + y][self.x + x] is not MinoType.NO_MINO
+            ):
+                corner_count[corner] = 1
+
+        if sum(corner_count.values()) < 3:
+            return TSpinType.NONE
+
+        # check if two of the filled corners are along the forward face of the T piece
+        forward_corners = [(0, 0), (2, 0), (2, 2), (0, 2), (0, 0)][
+            self.spin : self.spin + 2
+        ]
+        if sum(corner_count[corner] for corner in forward_corners) < 2:
+            return TSpinType.MINI
+        return TSpinType.TSPIN
+
     def moveX(self, direction: int, board: List[List[MinoType]]) -> bool:
+        # move the mino in the x direction by the specified amount
         new_x = self.x + direction
-        new_mino = Tetrimino(self.minoType, x=new_x, y=self.y, minoArr=self.minoArr)
+        new_mino = Tetrimino(self.minoType, x=new_x, y=self.y, minoArr=self.mino_arr)
 
         # check if move is valid
         if not new_mino.isValidPosition(board):
@@ -160,13 +179,14 @@ class Tetrimino:
 
         # save x translation
         self.x = new_x
-        self.lockDelayStart = -1
+        self.lock_delay_start = -1
         self.updateHint(board)
         return True
 
     def softDrop(self, board: List[List[MinoType]]) -> bool:
+        # drop the mino down by 1 block position
         new_mino = Tetrimino(
-            self.minoType, x=self.x, y=self.y + 1, minoArr=self.minoArr
+            self.minoType, x=self.x, y=self.y + 1, minoArr=self.mino_arr
         )
         # move piece down only if it's okay to do so
         if not new_mino.isValidPosition(board):
@@ -176,8 +196,9 @@ class Tetrimino:
         return True
 
     def hardDrop(self, board: List[List[MinoType]]) -> None:
+        # drop the mino down until it can't go any further
         new_mino = Tetrimino(
-            self.minoType, x=self.x, y=self.y + 1, minoArr=self.minoArr
+            self.minoType, x=self.x, y=self.y + 1, minoArr=self.mino_arr
         )
         # pretend we are soft dropping until we can't go any further
         while new_mino.isValidPosition(board):
@@ -187,7 +208,7 @@ class Tetrimino:
     def updateHint(self, board: List[List[MinoType]]) -> None:
         # make a copy of the current mino, see how far it hard drops to,
         # that is where the hint should be drawn
-        hint_mino = Tetrimino(self.minoType, x=self.x, y=self.y, minoArr=self.minoArr)
+        hint_mino = Tetrimino(self.minoType, x=self.x, y=self.y, minoArr=self.mino_arr)
         hint_mino.hardDrop(board)
         self.hintY = hint_mino.y
 
@@ -197,7 +218,7 @@ class Tetrimino:
 
     def _isOutOfBounds(self) -> bool:
         # for each block, check if it exceeds the bounds of the board
-        for i, row in enumerate(self.minoArr):
+        for i, row in enumerate(self.mino_arr):
             for j, el in enumerate(row):
                 if not el:
                     continue
@@ -211,7 +232,7 @@ class Tetrimino:
 
     def _isColliding(self, board: List[List[MinoType]]) -> bool:
         # for each block, check if it is already occupied by a mino block
-        for i, row in enumerate(self.minoArr):
+        for i, row in enumerate(self.mino_arr):
             for j, el in enumerate(row):
                 if el and board[self.y + i][self.x + j] is not MinoType.NO_MINO:
                     return True
