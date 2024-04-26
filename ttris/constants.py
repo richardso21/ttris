@@ -1,18 +1,21 @@
+# constants for pyxel.init
 WINDOW_HEIGHT = 200
 WINDOW_WIDTH = 180
 DISPLAY_SCALE = 8
 FPS = 60
 
-OVERFLOW_HEIGHT = 5
-BOARD_HEIGHT = 25
-BOARD_WIDTH = 10
+OVERFLOW_HEIGHT = 5  # height (in blocks) of the hidden overflow area
+BOARD_HEIGHT = 25  # height (in blocks) of the entire board area (including overflow)
+BOARD_WIDTH = 10  # width (in blocks) of the board
 
-BLOCK_SIZE = 8
+BLOCK_SIZE = 8  # size of each block in pixels
 
+# starting x, y position of the board in game window
 BOARD_X = 50
-BOARD_Y = -10
+BOARD_Y = -10  # y position includes overflow area
 
-LOCK_DELAY = 30  # 30 frames = .5 seconds
+LOCK_DELAY = 30  # 30 frames ~ .5 seconds
+MAX_LOCKS = 15
 
 MINO_ARRS = [
     [  # I

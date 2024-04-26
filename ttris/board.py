@@ -85,6 +85,15 @@ class Board:
         self.curr_piece.drawOnBoard(hint=True)  # draw hint first, then the actual piece
         self.curr_piece.drawOnBoard()
 
+        # draw locking status of current piece
+        self.curr_piece.drawLockDelayMeter(
+            BOARD_X - 1,
+            BOARD_Y + (BLOCK_SIZE * (BOARD_HEIGHT)),
+            BLOCK_SIZE * BOARD_WIDTH + 1,
+            color=8,
+            last_lock_color=2,
+        )
+
         # draw holding piece
         pyxel.rectb(
             BOARD_X - 48, BOARD_Y + (BLOCK_SIZE * OVERFLOW_HEIGHT) - 10, 48, 32, 13

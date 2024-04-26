@@ -12,6 +12,7 @@ from ttris.constants import (
     BOARD_X,
     BOARD_Y,
     LOCK_DELAY,
+    MAX_LOCKS,
     MINO_ARRS,
     SRS_TESTS,
     SRS_TESTS_I,
@@ -33,6 +34,7 @@ class Tetrimino:
         self._spin: int = 0
         self.prev_kick = None
         self.lock_delay_start: int = -1
+        self.lock_resets: int = 0
 
     @property
     def spin(self) -> int:
@@ -52,11 +54,12 @@ class Tetrimino:
         new_mino = Tetrimino(
             self.minoType, x=self.x, y=self.y + 1, minoArr=self.mino_arr
         )
-        if not new_mino.isValidPosition(board):
-            if self.lock_delay_start == -1:
-                self.lock_delay_start = pyxel.frame_count
-        else:
-            self.lock_delay_start = -1
+        if self.lock_resets < MAX_LOCKS:
+            if not new_mino.isValidPosition(board):
+                if self.lock_delay_start == -1:
+                    self.lock_delay_start = pyxel.frame_count
+            else:
+                self.lock_delay_start = -1
 
         return (
             self.lock_delay_start != -1
@@ -89,6 +92,30 @@ class Tetrimino:
                 u = (minoTypeVal) * BLOCK_SIZE
                 pyxel.blt(x, y, 1, u, 0, BLOCK_SIZE, BLOCK_SIZE)
 
+    def drawLockDelayMeter(
+        self,
+        x: int,
+        y: int,
+        max_length: int,
+        thickness=1,
+        horizontal=True,
+        color=7,
+        last_lock_color=8,
+    ) -> None:
+        # draw a meter that shows how long until the piece locks
+        if self.lock_delay_start == -1:
+            return
+        time_elapsed = pyxel.frame_count - self.lock_delay_start
+        # get fraction of max_length to draw based on time elapsed
+        length = int(max_length * (1 - time_elapsed / LOCK_DELAY))
+
+        color = color if self.lock_resets < MAX_LOCKS - 1 else last_lock_color
+
+        if horizontal:
+            pyxel.rect(x, y, length, thickness, color)
+        else:
+            pyxel.rect(x, y, thickness, length, color)
+
     def rotateMino(
         self, direction: RotationDirection, board: List[List[MinoType]]
     ) -> bool:
@@ -113,9 +140,15 @@ class Tetrimino:
                 self.mino_arr = new_minoArr
                 self.x += test_x
                 self.y -= test_y
-                self.lock_delay_start = -1
                 self.updateHint(board)
                 self.prev_kick = (test_x, test_y)
+
+                # update lock reset
+                if self.lock_delay_start != -1:
+                    self.lock_resets += 1
+                if self.lock_resets < MAX_LOCKS:
+                    self.lock_delay_start = -1
+
                 return True
 
         return False
@@ -179,8 +212,14 @@ class Tetrimino:
 
         # save x translation
         self.x = new_x
-        self.lock_delay_start = -1
         self.updateHint(board)
+
+        # update lock reset
+        if self.lock_delay_start != -1:
+            self.lock_resets += 1
+        if self.lock_resets < MAX_LOCKS:
+            self.lock_delay_start = -1
+
         return True
 
     def softDrop(self, board: List[List[MinoType]]) -> bool:
