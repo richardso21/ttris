@@ -11,12 +11,13 @@ from ttris.constants import (
     OVERFLOW_HEIGHT,
 )
 from ttris.controls import Controller
+from ttris.score import Score
 from ttris.sound import SoundBoard
 from ttris.tetriminos import MinoProvider, MinoType, Tetrimino
 
 
 class Board:
-    def __init__(self, das, arr, lookahead):
+    def __init__(self, das: int, arr: int, lookahead: int):
         # make empty board
         self.boardArr: List[List[MinoType]] = [
             [MinoType.NO_MINO] * BOARD_WIDTH for _ in range(BOARD_HEIGHT)
@@ -33,8 +34,11 @@ class Board:
 
         self.softDropTimer: int = 45
         self.linesCleared: int = 0
+        self.comboCount: int = 0
+        self.hardDropTick: bool = False
 
     def update(self) -> None:
+        self.hardDropTick = False
         # check controls
         self.controller.checkControls()
 
@@ -81,20 +85,47 @@ class Board:
         self.currPiece.drawOnBoard()
 
         # draw holding piece
+        pyxel.rectb(
+            BOARD_X - 48, BOARD_Y + (BLOCK_SIZE * OVERFLOW_HEIGHT) - 10, 48, 32, 13
+        )
+        pyxel.text(
+            BOARD_X - 32, BOARD_Y + (BLOCK_SIZE * OVERFLOW_HEIGHT) - 7, "HOLD", 7
+        )
         if self.hold:
+            if self.holdLock:
+                pyxel.dither(0.5)
             self.hold.draw(
-                -10
-                if self.hold.minoType not in [MinoType.MINO_I, MinoType.MINO_O]
-                else -14,
+                (
+                    -10
+                    if self.hold.minoType not in [MinoType.MINO_I, MinoType.MINO_O]
+                    else -14
+                ),
                 15,
             )
+            pyxel.dither(1)
 
         # draw minos/pieces in queue
+        pyxel.rectb(
+            BOARD_X + (BLOCK_SIZE * BOARD_WIDTH),
+            BOARD_Y + (BLOCK_SIZE * OVERFLOW_HEIGHT) - 10,
+            48,
+            130,
+            13,
+        )
+        pyxel.text(
+            BOARD_X + (BLOCK_SIZE * BOARD_WIDTH) + 16,
+            BOARD_Y + (BLOCK_SIZE * OVERFLOW_HEIGHT) - 7,
+            "NEXT",
+            7,
+        )
         for i, minoType in enumerate(self.minoProvider.minoPreview):
             Tetrimino(minoType).draw(
                 115 + (4 if minoType not in [MinoType.MINO_I, MinoType.MINO_O] else 0),
                 15 + (i * 24) - (4 if minoType is MinoType.MINO_I else 0),
             )
+
+        # update score and other game info besides board
+        Score.draw(self)
 
     def clearLines(self) -> None:
         # check for any line clears and construct new board if necessary
@@ -108,7 +139,12 @@ class Board:
             # need to re-update hint with new board state
             self.currPiece.updateHint(self.boardArr)
             self.linesCleared += len(clear_inds)
-            self.soundBoard.playLineClear()
+            self.comboCount += 1
+            self.soundBoard.playLineClear(self.comboCount)
+            if len(clear_inds) == 4:
+                self.soundBoard.playLCSpecial()
+        elif self.hardDropTick:
+            self.comboCount = 0
 
     def holdCurrPiece(self) -> None:
         if self.holdLock:
@@ -145,6 +181,7 @@ class Board:
         # get new piece
         self.spawnMino()
         self.holdLock = False
+        self.hardDropTick = True
 
     def spawnMino(self) -> None:
         self.currPiece = self.minoProvider.fetchMino()

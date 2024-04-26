@@ -1,5 +1,7 @@
 import pyxel
 
+from ttris.tetriminos import RotationDirection
+
 
 class Controller:
     def __init__(self, das, arr, board):
@@ -18,10 +20,19 @@ class Controller:
     def _checkRotationKeys(self) -> None:
         res = False
         if pyxel.btnp(pyxel.KEY_UP) or pyxel.btnp(pyxel.KEY_X):
-            res |= self.board.currPiece.rotateMino(1, self.board.boardArr)
+            res |= self.board.currPiece.rotateMino(
+                RotationDirection.CLOCKWISE, self.board.boardArr
+            )
 
         if pyxel.btnp(pyxel.KEY_Z):
-            res |= self.board.currPiece.rotateMino(-1, self.board.boardArr)
+            res |= self.board.currPiece.rotateMino(
+                RotationDirection.COUNTERCLOCKWISE, self.board.boardArr
+            )
+
+        if pyxel.btnp(pyxel.KEY_A):  # 180 rotation
+            res |= self.board.currPiece.rotateMino(
+                RotationDirection.FLIP180, self.board.boardArr
+            )
 
         if res:
             self.board.soundBoard.playRotation()

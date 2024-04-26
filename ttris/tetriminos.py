@@ -19,6 +19,12 @@ from ttris.constants import (
 )
 
 
+class RotationDirection(Enum):
+    CLOCKWISE = 1
+    COUNTERCLOCKWISE = -1
+    FLIP180 = 2
+
+
 class MinoType(Enum):
     NO_MINO = 0
     MINO_I = 1
@@ -92,6 +98,8 @@ class Tetrimino:
         # if hint, then draw outline of piece instead with the hintY value
         minoTypeVal = self.minoType.value - 1 if not hint else 7
         minoY = self.y if not hint else self.hintY
+        if hint:
+            pyxel.dither(0.5)
         for i, row in enumerate(self.minoArr):
             for j, block in enumerate(row):
                 if not block:
@@ -100,30 +108,27 @@ class Tetrimino:
                 y = (minoY + i) * BLOCK_SIZE + BOARD_Y
                 u = (minoTypeVal) * BLOCK_SIZE
                 pyxel.blt(x, y, 1, u, 0, BLOCK_SIZE, BLOCK_SIZE)
+        pyxel.dither(1)
 
-    def rotateMino(self, direction: int, board: List[List[MinoType]]) -> bool:
+    def rotateMino(
+        self, direction: RotationDirection, board: List[List[MinoType]]
+    ) -> bool:
         if self.minoType == MinoType.MINO_O:  # O-pieces can't rotate
             return True
 
-        # perform the rotation
-        # https://stackoverflow.com/questions/8421337/rotating-a-two-dimensional-array-in-python
-        new_minoArr = (
-            list(zip(*self.minoArr[::-1]))
-            if direction > 0
-            else list(zip(*self.minoArr))[::-1]
-        )
+        new_minoArr = self._getRotatedMinoArr(direction.value)
 
         # check if rotation works with the SRS tests
         tests = (SRS_TESTS if self.minoType != MinoType.MINO_I else SRS_TESTS_I)[
             self.spin
-        ][0 if direction == 1 else 1]
+        ][direction.value]
         for test_x, test_y in tests:
             new_mino = Tetrimino(
                 self.minoType, x=self.x + test_x, y=self.y - test_y, minoArr=new_minoArr
             )
             if new_mino.isValidPosition(board):
                 # save rotation if successful
-                self._spin += direction
+                self._spin += direction.value
                 self.minoArr = new_minoArr
                 self.x += test_x
                 self.y -= test_y
@@ -131,6 +136,19 @@ class Tetrimino:
                 self.updateHint(board)
                 return True
         return False
+
+    def _getRotatedMinoArr(self, direction: int) -> List[List[int]]:
+        new_minoArr = self.minoArr
+        while direction != 0:
+            # perform the rotation
+            # https://stackoverflow.com/questions/8421337/rotating-a-two-dimensional-array-in-python
+            new_minoArr = (
+                list(zip(*new_minoArr[::-1]))
+                if direction > 0
+                else list(zip(*new_minoArr))[::-1]
+            )
+            direction -= 1 if direction > 0 else -1
+        return new_minoArr
 
     def moveX(self, direction: int, board: List[List[MinoType]]) -> bool:
         new_x = self.x + direction

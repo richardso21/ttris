@@ -15,7 +15,10 @@ class SoundBoard:
         pyxel.play(1, 3)
 
     def playRotation(self) -> None:
-        pyxel.play(1, 2)
+        pyxel.play(2, 2)
 
-    def playLineClear(self) -> None:
+    def playLineClear(self, combo: int) -> None:
+        pyxel.play(3, 4 + min(combo, 8))
+
+    def playLCSpecial(self) -> None:
         pyxel.play(0, 0)

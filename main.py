@@ -13,6 +13,7 @@ class TtrisGame:
             display_scale=DISPLAY_SCALE,
             fps=FPS,
         )
+        # pyxel.screen_mode(2)
         pyxel.load("assets/ttris.pyxres")
         self.board = Board(10, 1, 5)
         pyxel.run(self.update, self.draw)
