@@ -1,7 +1,7 @@
 from collections import deque
 from itertools import islice
 from random import Random
-from typing import List, Tuple
+from typing import List
 
 import pyxel
 
@@ -99,8 +99,8 @@ class Tetrimino:
         max_length: int,
         thickness=1,
         horizontal=True,
-        color=7,
-        last_lock_color=8,
+        color=8,
+        last_lock_color=2,
     ) -> None:
         # draw a meter that shows how long until the piece locks
         if self.lock_delay_start == -1:

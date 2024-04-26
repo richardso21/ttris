@@ -8,6 +8,9 @@ from ttris.constants import (
     BOARD_WIDTH,
     BOARD_X,
     BOARD_Y,
+    LEVEL_GRAVITY_FRAMES,
+    LINE_CLEARS_LEVEL,
+    MAX_LEVEL,
     OVERFLOW_HEIGHT,
 )
 from ttris.controls import Controller
@@ -33,10 +36,19 @@ class Board:
         self.controller = Controller(das, arr, self)
         self.sound_board = SoundBoard()
 
-        self.soft_drop_timer: int = 45
+        self.level: int = 1
         self.lines_cleared: int = 0
+        self.lines_cleared_level: int = 0
         self.combo_count: int = 0
         self.hard_drop_tick: bool = False
+
+    @property
+    def curr_lc_goal_level(self) -> int:
+        return LINE_CLEARS_LEVEL[self.level - 1]
+
+    @property
+    def soft_drop_timer(self) -> int:
+        return LEVEL_GRAVITY_FRAMES[self.level - 1]
 
     def update(self) -> None:
         self.hard_drop_tick = False
@@ -44,7 +56,10 @@ class Board:
         self.controller.checkControls()
 
         # piece gravity
-        if pyxel.frame_count % self.soft_drop_timer == 0:
+        if self.soft_drop_timer == 0:
+            while self.curr_piece.softDrop(self.board_arr):
+                pass
+        elif pyxel.frame_count % self.soft_drop_timer == 0:
             self.curr_piece.softDrop(self.board_arr)
 
         # check lock delay of piece, hard drop if lock expires
@@ -90,8 +105,6 @@ class Board:
             BOARD_X - 1,
             BOARD_Y + (BLOCK_SIZE * (BOARD_HEIGHT)),
             BLOCK_SIZE * BOARD_WIDTH + 1,
-            color=8,
-            last_lock_color=2,
         )
 
         # draw holding piece
@@ -155,6 +168,14 @@ class Board:
                 self.sound_board.playLCSpecial()
         elif self.hard_drop_tick:
             self.combo_count = 0
+        # update level based on lines cleared
+        self.lines_cleared_level += len(clear_inds)
+        if (
+            self.lines_cleared_level >= self.curr_lc_goal_level
+            and self.level < MAX_LEVEL
+        ):
+            self.lines_cleared_level -= self.curr_lc_goal_level
+            self.level += 1
 
     def holdCurrPiece(self) -> None:
         if self.hold_lock:

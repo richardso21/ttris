@@ -17,6 +17,10 @@ BOARD_Y = -10  # y position includes overflow area
 LOCK_DELAY = 30  # 30 frames ~ .5 seconds
 MAX_LOCKS = 15
 
+LINE_CLEARS_LEVEL = [10, 12, 14, 16, 18, 20, 22, 24, 26, 0]
+LEVEL_GRAVITY_FRAMES = [45, 35, 25, 15, 10, 5, 3, 2, 1, 0]
+MAX_LEVEL = 10
+
 MINO_ARRS = [
     [  # I
         [0, 0, 0, 0],
