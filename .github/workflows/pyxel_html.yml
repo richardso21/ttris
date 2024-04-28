@@ -40,7 +40,8 @@ jobs:
           pip install pyxel
           pyxel package . main.py
           pyxel app2html ttris.pyxapp
-          mv ttris.html index.html
+          cp ttris.html index.html
+        # preserve old link to game (richardso21.github.io/ttris/ttris.html)
       # <<< Build pyxel app
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
