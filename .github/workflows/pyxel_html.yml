@@ -3,6 +3,10 @@ on:
   # Runs on pushes + PRs targeting the default branch
   push:
     branches: ["main"]
+    paths:
+      - 'assets/**'
+      - 'ttris/**'
+      - 'main.py'
   pull_request:
     branches: ["main"]
   # Allows you to run this workflow manually from the Actions tab
