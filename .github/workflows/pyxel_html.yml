@@ -35,6 +35,7 @@ jobs:
           python-version: "3.10"
       - name: Install dependencies
         run: |
+          sudo apt install libsdl2-mixer-2.0-0 libsdl2-image-2.0-0 libsdl2-2.0-0 -y
           python -m pip install --upgrade pip
           pip install pyxel
           pyxel package . main.py
