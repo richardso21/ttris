@@ -21,6 +21,8 @@ LINE_CLEARS_LEVEL = [10, 12, 14, 16, 18, 20, 22, 24, 26, 0]
 LEVEL_GRAVITY_FRAMES = [45, 35, 25, 15, 10, 5, 3, 2, 1, 0]
 MAX_LEVEL = 10
 
+LC_NAMES = ["Single", "Double", "Triple", "Tetris"]
+
 MINO_ARRS = [
     [  # I
         [0, 0, 0, 0],

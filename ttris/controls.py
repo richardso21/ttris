@@ -1,6 +1,5 @@
 import pyxel
 
-from ttris.enums import TSpinType
 from ttris.tetriminos import RotationDirection
 
 
@@ -38,8 +37,10 @@ class Controller:
         if res:
             self.board.sound_board.playRotation()
 
-            if self.board.curr_piece.checkTSpin(self.board.board_arr):
+            tspin = self.board.curr_piece.checkTSpin(self.board.board_arr)
+            if tspin:
                 self.board.sound_board.playLCSpecial()
+                self.board.previous_tspin = tspin
 
     def _checkMovementKeys(self) -> None:
         res = False

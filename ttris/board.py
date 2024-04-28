@@ -14,7 +14,7 @@ from ttris.constants import (
     OVERFLOW_HEIGHT,
 )
 from ttris.controls import Controller
-from ttris.enums import MinoType
+from ttris.enums import MinoType, TSpinType
 from ttris.score import Score
 from ttris.sound import SoundBoard
 from ttris.tetriminos import MinoProvider, Tetrimino
@@ -37,10 +37,13 @@ class Board:
         self.sound_board = SoundBoard()
 
         self.level: int = 1
+        self.previous_lc: int = 0
         self.lines_cleared: int = 0
         self.lines_cleared_level: int = 0
         self.combo_count: int = 0
         self.hard_drop_tick: bool = False
+        self.score: int = 0
+        self.previous_tspin: TSpinType = TSpinType.NONE
 
     @property
     def curr_lc_goal_level(self) -> int:
@@ -153,6 +156,7 @@ class Board:
     def clearLines(self) -> None:
         # check for any line clears and construct new board if necessary
         clear_inds = [i for i, row in enumerate(self.board_arr) if all(row)]
+
         if len(clear_inds):  # some lines need to be cleared
             new_board_arr = [[MinoType.NO_MINO] * BOARD_WIDTH for _ in clear_inds]
             new_board_arr.extend(
@@ -166,16 +170,20 @@ class Board:
             self.sound_board.playLineClear(self.combo_count)
             if len(clear_inds) == 4:
                 self.sound_board.playLCSpecial()
-        elif self.hard_drop_tick:
+            # update level based on lines cleared
+            self.lines_cleared_level += len(clear_inds)
+            if (
+                self.lines_cleared_level >= self.curr_lc_goal_level
+                and self.level < MAX_LEVEL
+            ):
+                self.lines_cleared_level -= self.curr_lc_goal_level
+                self.level += 1
+            self.previous_lc = len(clear_inds)
+
+        elif self.hard_drop_tick:  # no line clears, but hard drop occurred
             self.combo_count = 0
-        # update level based on lines cleared
-        self.lines_cleared_level += len(clear_inds)
-        if (
-            self.lines_cleared_level >= self.curr_lc_goal_level
-            and self.level < MAX_LEVEL
-        ):
-            self.lines_cleared_level -= self.curr_lc_goal_level
-            self.level += 1
+            self.previous_lc = 0
+            self.previous_tspin = TSpinType.NONE
 
     def holdCurrPiece(self) -> None:
         if self.hold_lock:
