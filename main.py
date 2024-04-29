@@ -1,10 +1,15 @@
 import pyxel
 
-from ttris.board import Board
-from ttris.constants import DISPLAY_SCALE, FPS, WINDOW_HEIGHT, WINDOW_WIDTH
+from ttris.main import TtrisGame
+
+# constants for pyxel.init
+WINDOW_HEIGHT = 200
+WINDOW_WIDTH = 180
+DISPLAY_SCALE = 8
+FPS = 60
 
 
-class TtrisGame:
+class TtrisMenu:
     def __init__(self) -> None:
         pyxel.init(
             WINDOW_WIDTH,
@@ -15,16 +20,18 @@ class TtrisGame:
         )
         pyxel.screen_mode(2)
         pyxel.load("assets/ttris.pyxres")
-        self.board = Board(10, 1, 5)
-        pyxel.run(self.update, self.draw)
+        self.runGame()
 
     def update(self) -> None:
-        self.board.update()
         pass
 
     def draw(self) -> None:
-        pyxel.cls(0)
-        self.board.draw()
+        pass
+
+    def runGame(self) -> None:
+        self.game = TtrisGame()
+        self.game.run()
+        pyxel.run(self.update, self.draw)
 
 
-TtrisGame()
+TtrisMenu()

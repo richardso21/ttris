@@ -1,9 +1,3 @@
-# constants for pyxel.init
-WINDOW_HEIGHT = 200
-WINDOW_WIDTH = 180
-DISPLAY_SCALE = 8
-FPS = 60
-
 OVERFLOW_HEIGHT = 5  # height (in blocks) of the hidden overflow area
 BOARD_HEIGHT = 25  # height (in blocks) of the entire board area (including overflow)
 BOARD_WIDTH = 10  # width (in blocks) of the board

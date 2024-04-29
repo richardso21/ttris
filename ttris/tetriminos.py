@@ -253,9 +253,9 @@ class Tetrimino:
 
     def isValidPosition(self, board: List[List[MinoType]]) -> bool:
         # check collision with other minos and out of bounds
-        return not (self._isOutOfBounds() or self._isColliding(board))
+        return not (self.isOutOfBounds() or self.isColliding(board))
 
-    def _isOutOfBounds(self) -> bool:
+    def isOutOfBounds(self) -> bool:
         # for each block, check if it exceeds the bounds of the board
         for i, row in enumerate(self.mino_arr):
             for j, el in enumerate(row):
@@ -269,7 +269,7 @@ class Tetrimino:
                     return True
         return False
 
-    def _isColliding(self, board: List[List[MinoType]]) -> bool:
+    def isColliding(self, board: List[List[MinoType]]) -> bool:
         # for each block, check if it is already occupied by a mino block
         for i, row in enumerate(self.mino_arr):
             for j, el in enumerate(row):

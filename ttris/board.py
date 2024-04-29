@@ -44,6 +44,7 @@ class Board:
         self.hard_drop_tick: bool = False
         self.score: int = 0
         self.previous_tspin: TSpinType = TSpinType.NONE
+        self.game_over: bool = False
 
     @property
     def curr_lc_goal_level(self) -> int:
@@ -54,6 +55,8 @@ class Board:
         return LEVEL_GRAVITY_FRAMES[self.level - 1]
 
     def update(self) -> None:
+        if self.game_over:
+            return
         self.hard_drop_tick = False
         # check controls
         self.controller.checkControls()
@@ -73,6 +76,24 @@ class Board:
         self.clearLines()
 
     def draw(self) -> None:
+        # draw board elements
+        self.drawBoard(self.game_over)
+
+        # draw current/falling piece
+        self.drawCurrPiece(self.game_over)
+
+        # draw hold and queue pieces & elements
+        self.drawHold()
+        self.drawQueue()
+
+        # update score and other game info besides board
+        Score.draw(self)
+
+        if self.game_over:
+            pyxel.rect(BOARD_X + 15, BOARD_Y + 95, 45, 15, 8)
+            pyxel.text(BOARD_X + 20, BOARD_Y + 100, "GAME OVER", 7)
+
+    def drawBoard(self, game_over: bool) -> None:
         # draw the bounding box up to the 20th block
         pyxel.rectb(
             BOARD_X - 1,
@@ -89,8 +110,9 @@ class Board:
             1,
             0,
         )
-
-        # draw existing pieces on the board if a piece has dropped
+        if game_over:
+            pyxel.dither(0.5)
+        # draw existing blocks
         for i, row in enumerate(self.board_arr):
             for j, block in enumerate(row):
                 if block == MinoType.NO_MINO:
@@ -99,17 +121,25 @@ class Board:
                 y = i * BLOCK_SIZE + BOARD_Y
                 u = (block.value - 1) * BLOCK_SIZE
                 pyxel.blt(x, y, 1, u, 0, BLOCK_SIZE, BLOCK_SIZE)
+        pyxel.dither(1)
 
-        self.curr_piece.drawOnBoard(hint=True)  # draw hint first, then the actual piece
+    def drawCurrPiece(self, game_over: bool) -> None:
+        if game_over:
+            pyxel.dither(0.5)
+        if not game_over:
+            self.curr_piece.drawOnBoard(
+                hint=True
+            )  # draw hint first, then the actual piece
         self.curr_piece.drawOnBoard()
-
         # draw locking status of current piece
         self.curr_piece.drawLockDelayMeter(
             BOARD_X - 1,
             BOARD_Y + (BLOCK_SIZE * (BOARD_HEIGHT)),
             BLOCK_SIZE * BOARD_WIDTH + 1,
         )
+        pyxel.dither(1)
 
+    def drawHold(self) -> None:
         # draw holding piece
         pyxel.rectb(
             BOARD_X - 48, BOARD_Y + (BLOCK_SIZE * OVERFLOW_HEIGHT) - 10, 48, 32, 13
@@ -130,6 +160,7 @@ class Board:
             )
             pyxel.dither(1)
 
+    def drawQueue(self) -> None:
         # draw minos/pieces in queue
         pyxel.rectb(
             BOARD_X + (BLOCK_SIZE * BOARD_WIDTH),
@@ -149,9 +180,6 @@ class Board:
                 115 + (4 if minoType not in [MinoType.MINO_I, MinoType.MINO_O] else 0),
                 15 + (i * 24) - (4 if minoType is MinoType.MINO_I else 0),
             )
-
-        # update score and other game info besides board
-        Score.draw(self)
 
     def clearLines(self) -> None:
         # check for any line clears and construct new board if necessary
@@ -224,4 +252,7 @@ class Board:
 
     def spawnMino(self) -> None:
         self.curr_piece = self.mino_provider.fetchMino()
-        self.curr_piece.updateHint(self.board_arr)
+        if self.curr_piece.isColliding(self.board_arr):
+            self.game_over = True
+        else:
+            self.curr_piece.updateHint(self.board_arr)
