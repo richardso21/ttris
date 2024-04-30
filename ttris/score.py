@@ -18,7 +18,7 @@ class Score:
             7,
         )
 
-        pyxel.text(2, 100, f"SCORE\n{board.score}", 7)
+        # pyxel.text(2, 100, f"SCORE\n{board.score}", 7)
 
         if board.previous_lc > 0:
             pyxel.text(
